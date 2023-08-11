@@ -33,7 +33,7 @@ def velocity_call_back(velocity_message):
     wzd = velocity_message.angular.z
     return None
 
-def main(odom_pub):
+def main(odom_pub, ref_pub):
     # Load Model form XML file
     m = mujoco.MjModel.from_xml_path('drone.xml')
     # Print color of the box and position of the red box
@@ -41,9 +41,13 @@ def main(odom_pub):
     # Get information form the xml
     data = mujoco.MjData(m)
 
+    # odometry Message
+    odom_drone = Odometry()
+    ref_drone = Twist()
+
     # Simulation time parameters
     ts = 0.001
-    tf = 120
+    tf = 200
     t = np.arange(0, tf+ts, ts, dtype=np.double)
 
     # Parameters of the entire system
@@ -70,7 +74,6 @@ def main(odom_pub):
     qdp[2,:] = 0.0
 
     rate_d = np.zeros((1, t.shape[0]), dtype=np.double)
-    rate_d[0, :] = 0
 
     # Define Paramerters for the software
     m.opt.timestep = ts
@@ -89,6 +92,7 @@ def main(odom_pub):
 
     vy_c = np.array([[0.0], [0.0], [0.0]])
     vx_c = np.array([[0.0], [0.0], [0.0]])
+
     with mujoco.viewer.launch_passive(m, data) as viewer:
         if viewer.is_running():
             # Initial data System
@@ -97,8 +101,10 @@ def main(odom_pub):
             n[: ,0] = get_system_states_ori_sensor(data)
             quat[: ,0] = get_system_states_quat_sensor(data)
             rate_b[: ,0] = get_system_states_vel_a_sensor(data)
+            odom_drone = get_odometry(q[:, 0], quat[:,0], qp[:, 0], rate_b[:, 0], odom_drone)
+            send_odometry(odom_drone, odom_pub)
             # Init System take off
-            for k in range(0, 10000):
+            for k in range(0, 12000):
                 tic = time.time()
 
                 u[0, k] = controller_z(mass, g, [0, 0, 0.3], qp[:,k ])
@@ -116,6 +122,14 @@ def main(odom_pub):
                 quat[: ,k+1] = get_system_states_quat_sensor(data)
                 rate_b[: ,k+1] = get_system_states_vel_a_sensor(data)
 
+                # Send Odometry Drone
+                odom_drone = get_odometry(q[:, k+1], quat[:,k+1], qp[:, k+1], rate_b[:, k+1], odom_drone)
+                send_odometry(odom_drone, odom_pub)
+
+                # Send Control inputs
+                ref_drone = get_reference(u[:, k], ref_drone)
+                send_reference(ref_drone, ref_pub)
+
                 # System evolution visualization
                 with viewer.lock():
                     viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = int(data.time % 2)
@@ -124,6 +138,7 @@ def main(odom_pub):
                 while (time.time() - tic <= m.opt.timestep):
                     None
                 toc = time.time() - tic 
+
 
             # Simulation of the system
             for k in range(0, t.shape[0]):
@@ -146,11 +161,6 @@ def main(odom_pub):
                 # System Evolution
                 mujoco.mj_step(m, data)
 
-                # System evolution visualization
-                with viewer.lock():
-                    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = int(data.time % 2)
-                viewer.sync()
-
                 # Get system states
                 q[:, k+1] = get_system_states_pos_sensor(data)
                 qp[:, k+1] = get_system_states_vel_sensor(data)
@@ -158,6 +168,18 @@ def main(odom_pub):
                 quat[: ,k+1] = get_system_states_quat_sensor(data)
                 rate_b[: ,k+1] = get_system_states_vel_a_sensor(data)
 
+                # Send Odometry Drone
+                odom_drone = get_odometry(q[:, k+1], quat[:,k+1], qp[:, k+1], rate_b[:, k+1], odom_drone)
+                send_odometry(odom_drone, odom_pub)
+
+                # Send Control inputs
+                ref_drone = get_reference(u[:, k], ref_drone)
+                send_reference(ref_drone, ref_pub)
+
+                # System evolution visualization
+                with viewer.lock():
+                    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = int(data.time % 2)
+                viewer.sync()
 
                 # Section to guarantee same sample times
                 while (time.time() - tic <= m.opt.timestep):
@@ -229,8 +251,12 @@ if __name__ == '__main__':
         velocity_topic = "/cmd_vel"
         velocity_subscriber = rospy.Subscriber(velocity_topic, Twist, velocity_call_back)
 
+        # Publisher Info
+        reference_topic = "/input_ref"
+        reference_subscriber = rospy.Publisher(reference_topic, Twist, queue_size = 10)
+
         # Main System
-        main(odometry_publisher)
+        main(odometry_publisher, reference_subscriber)
 
     except(rospy.ROSInterruptException, KeyboardInterrupt):
         print("Error System")
@@ -238,3 +264,13 @@ if __name__ == '__main__':
     else:
         print("Complete Execution")
         pass
+
+
+    # Velocidades en el mundo Lineales
+    # Velocidad angulares en el cuerpo
+    # Vref Cuerpo
+    # Quaternions 
+    # Posiciones
+    # Empuje y torque
+
+

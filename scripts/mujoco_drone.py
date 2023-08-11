@@ -1,5 +1,49 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import rospy
+
+def get_odometry(position, quaternions, linear_velocity, angular_velocity, odom_msg):
+        odom_msg.header.stamp = rospy.Time.now()
+        odom_msg.header.frame_id = "world"
+        odom_msg.child_frame_id = "Drone"
+
+
+        odom_msg.pose.pose.position.x = position[0]
+        odom_msg.pose.pose.position.y = position[1]
+        odom_msg.pose.pose.position.z = position[2]
+
+        odom_msg.pose.pose.orientation.x = quaternions[1]
+        odom_msg.pose.pose.orientation.y = quaternions[2]
+        odom_msg.pose.pose.orientation.z = quaternions[3]
+        odom_msg.pose.pose.orientation.w = quaternions[0]
+
+        odom_msg.twist.twist.linear.x = linear_velocity[0]
+        odom_msg.twist.twist.linear.y = linear_velocity[1]
+        odom_msg.twist.twist.linear.z = linear_velocity[2]
+
+        odom_msg.twist.twist.angular.x = angular_velocity[0]
+        odom_msg.twist.twist.angular.y = angular_velocity[1]
+        odom_msg.twist.twist.angular.z = angular_velocity[2]
+        return odom_msg
+
+
+def send_odometry(odom_msg, odom_pu):
+    odom_pu.publish(odom_msg)
+    return None
+
+def get_reference(ref, ref_msg):
+        ref_msg.linear.x = 0
+        ref_msg.linear.y = 0
+        ref_msg.linear.z = ref[0]
+
+        ref_msg.angular.x = ref[1]
+        ref_msg.angular.y = ref[2]
+        ref_msg.angular.z = ref[3]
+        return ref_msg
+
+def send_reference(ref_msg, ref_pu):
+    ref_pu.publish(ref_msg)
+    return None
 
 def control_action(system, u):
     u1 = u[0]
