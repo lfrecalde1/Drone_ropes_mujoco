@@ -73,7 +73,7 @@ def main(odom_pub, ref_pub):
     qdp[1,:] = 0.0
     qdp[2,:] = 0.0
 
-    rate_d = np.zeros((1, t.shape[0]), dtype=np.double)
+    rate_d = np.zeros((3, t.shape[0]), dtype=np.double)
 
     # Define Paramerters for the software
     m.opt.timestep = ts
@@ -108,15 +108,14 @@ def main(odom_pub, ref_pub):
                 tic = time.time()
 
                 u[0, k] = controller_z(mass, g, [0, 0, 0.3], qp[:,k ])
-                u[1, k], roll_c, vy_c = controller_attitude_roll([0, 0, 0.3], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, roll_c, vy_c)
-                u[2, k], pitch_c, vx_c = controller_attitude_pitch([0, 0, 0.3], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, pitch_c, vx_c)
+                u[1, k], roll_c, vy_c, p_reference = controller_attitude_roll([0, 0, 0.3], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, roll_c, vy_c)
+                u[2, k], pitch_c, vx_c, q_reference = controller_attitude_pitch([0, 0, 0.3], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, pitch_c, vx_c)
                 u[3, k] = controller_attitude_r([0, 0, 0.3], qp[:, k], rate_d[:, k], [n[0, k], n[1, k], rate_b[2, k]])
                 control_action(data, u[:,k])
                 # System evolution
                 mujoco.mj_step(m, data)
 
-                # System values
-                q[:, k+1] = get_system_states_pos_sensor(data)
+                # System values q[:, k+1] = get_system_states_pos_sensor(data)
                 qp[:, k+1] = get_system_states_vel_sensor(data)
                 n[: ,k+1] = get_system_states_ori_sensor(data)
                 quat[: ,k+1] = get_system_states_quat_sensor(data)
@@ -127,7 +126,7 @@ def main(odom_pub, ref_pub):
                 send_odometry(odom_drone, odom_pub)
 
                 # Send Control inputs
-                ref_drone = get_reference(u[:, k], ref_drone)
+                ref_drone = get_reference(u[:, k], p_reference, q_reference, ref_drone)
                 send_reference(ref_drone, ref_pub)
 
                 # System evolution visualization
@@ -147,12 +146,12 @@ def main(odom_pub, ref_pub):
                 qdp[0, k] = vxd
                 qdp[1, k] = vyd
                 qdp[2, k] = vzd
-                rate_d[0, k] = wzd
+                rate_d[2, k] = wzd
 
                 # Control Section
                 u[0, k] = controller_z(mass, g, qdp[:, k], qp[:, k])
-                u[1, k], roll_c, vy_c = controller_attitude_roll(qdp[:, k], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, roll_c, vy_c)
-                u[2, k], pitch_c, vx_c = controller_attitude_pitch(qdp[:, k], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, pitch_c, vx_c)
+                u[1, k], roll_c, vy_c, p_reference = controller_attitude_roll(qdp[:, k], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, roll_c, vy_c)
+                u[2, k], pitch_c, vx_c, q_reference = controller_attitude_pitch(qdp[:, k], qp[:, k], [n[0, k], n[1, k], rate_b[2, k]], ts, pitch_c, vx_c)
                 u[3, k] = controller_attitude_r(qdp[:, k], qp[:, k], rate_d[:, k], [n[0, k], n[1, k], rate_b[2, k]])
 
                 # Send Control Actions  to the system
@@ -173,7 +172,7 @@ def main(odom_pub, ref_pub):
                 send_odometry(odom_drone, odom_pub)
 
                 # Send Control inputs
-                ref_drone = get_reference(u[:, k], ref_drone)
+                ref_drone = get_reference(u[:, k], p_reference, q_reference, ref_drone)
                 send_reference(ref_drone, ref_pub)
 
                 # System evolution visualization

@@ -59,14 +59,14 @@
   </equality>-->
     <actuator>
     <motor ctrllimited="true" ctrlrange="0.0 20.0" gear="0 0. 1. 0. 0. 0." site="thrust"/>
-    <motor ctrllimited="true" ctrlrange="-5 5" gear="0. 0. 0. 1. 0. 0." site="rateX"/>
-    <motor ctrllimited="true" ctrlrange="-5 5" gear="0. 0. 0. 0. 1. 0." site="rateY"/>
-    <motor ctrllimited="true" ctrlrange="-5 5" gear="0. 0. 0. 0. 0. 1." site="rateZ"/>
+    <motor ctrllimited="true" ctrlrange="-0.07 0.07" gear="0. 0. 0. 1. 0. 0." site="rateX"/>
+    <motor ctrllimited="true" ctrlrange="-0.07 0.07" gear="0. 0. 0. 0. 1. 0." site="rateY"/>
+    <motor ctrllimited="true" ctrlrange="-0.03 0.03" gear="0. 0. 0. 0. 0. 1." site="rateZ"/>
     </actuator>
   <sensor>
-  <framequat name="quat_drone" objtype="geom" reftype="body" refname="world" objname="core" noise="0.00"/>
-  <framepos name="position_drone" objtype="geom" objname="core" noise="0.00"/>
-  <velocimeter name="linear_velocity_drone" site="thrust" noise="0.00"/>
-  <gyro name="angular_velocity_drone" site="thrust" noise="0.00"/>
+  <framequat name="quat_drone" objtype="geom" reftype="body" refname="world" objname="core" noise="0.0005"/>
+  <framepos name="position_drone" objtype="geom" objname="core" noise="0.0005"/>
+  <velocimeter name="linear_velocity_drone" site="thrust" noise="0.0005"/>
+  <gyro name="angular_velocity_drone" site="thrust" noise="0.0005"/>
   </sensor>
 </mujoco>

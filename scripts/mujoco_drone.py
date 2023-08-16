@@ -31,9 +31,9 @@ def send_odometry(odom_msg, odom_pu):
     odom_pu.publish(odom_msg)
     return None
 
-def get_reference(ref, ref_msg):
-        ref_msg.linear.x = 0
-        ref_msg.linear.y = 0
+def get_reference(ref, p_ref, q_ref, ref_msg):
+        ref_msg.linear.x = p_ref
+        ref_msg.linear.y = q_ref
         ref_msg.linear.z = ref[0]
 
         ref_msg.angular.x = ref[1]
@@ -59,7 +59,7 @@ def control_action(system, u):
 
 def controller_z(mass, gravity, qdp, qp):
     # Control Gains
-    Kp = 50*np.eye(3, 3)
+    Kp = 10*np.eye(3, 3)
     # Split values
     xp = qp[0]
     yp = qp[1]
@@ -119,7 +119,7 @@ def controller_attitude_roll(qdp, qp, rate, ts, r_c, v_c):
     control_value, r_c = pid(-roll_d, p, r_c, 0.05, 0, 0.05, ts)
 
     
-    return control_value, r_c, v_c
+    return control_value, r_c, v_c, -roll_d
 
 def controller_attitude_pitch(qdp, qp, rate, ts, p_c, v_c):
 
@@ -143,12 +143,12 @@ def controller_attitude_pitch(qdp, qp, rate, ts, p_c, v_c):
     control_value, p_c = pid(pitch_d, q, p_c, 0.05, 0, 0.05, ts)
 
     
-    return control_value, p_c, v_c
+    return control_value, p_c, v_c, pitch_d
 
 def controller_attitude_r(qdp, qp, rate_d, rate):
 
     # Split values
-    rd= rate_d[0]
+    rd= rate_d[2]
 
     p = rate[0]
     q = rate[1]
@@ -156,7 +156,7 @@ def controller_attitude_r(qdp, qp, rate_d, rate):
 
     error = rd - r
     # Control Law
-    control_value = 0.1*error
+    control_value = 0.03*error
     return control_value
 
 
